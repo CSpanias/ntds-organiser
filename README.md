@@ -114,27 +114,28 @@ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f test
 
 ### Core Outputs
 
-* `enabled-users.txt`
-* `domain-admins.txt`
-* `domain-policy.txt`
-* `ntds-users-clean.txt`
-* `ntlm-hashes.txt`
-* `mapped-passwords.txt`
+* `enabled-users.txt` (Enabled user accounts after filtering)
+* `domain-admins.txt` (Domain Admin accounts extracted from BloodHound)
+* `domain-policy.txt` (Password policy extracted from the domain)
+* `ntds-users-clean.txt` (Primary account dataset used for password mapping)
+* `ntlm-hashes.txt` (Hashcat-ready NTLM hashes)
+* `mapped-passwords.txt` (Final dataset in `username:password` format)
 
 ### Conditional Outputs
 
 > Generated only when applicable.
 
-* `lm-users.txt`
-* `lm-hashes.txt`
+* `lm-users.txt` (Users that have an LM hash)
+* `lm-hashes.txt` (Hashcat-ready LM hashes)
 
 ### Audit Artefacts
 
 > Generated to assist troubleshooting and validation.
 
-* `.ntds-disabled.txt`
-* `.ntds-machines.txt`
-* `.testing-accounts.txt`
+* `.ntds-enabled.txt` (All enabled accounts)
+* `.ntds-disabled.txt` (All disabled accounts)
+* `.ntds-machines.txt` (Machine accounts removed from analysis)
+* `.testing-accounts.txt` (Accounts excluded via the filtering option `-f`)
 
 ### Example Domain Policy
 
