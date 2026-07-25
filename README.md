@@ -90,7 +90,7 @@ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p hashcat.potfile -f test
 ## Example Output
 
 ```bash
-ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f testing-acc-1,testing-acc-2
+$ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f testing-acc-1,testing-acc-2
 
 [*] NTDS Organiser v1.0
 
@@ -137,28 +137,11 @@ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f test
 * `.ntds-machines.txt` (Machine accounts removed from analysis)
 * `.testing-accounts.txt` (Accounts excluded via the filtering option `-f`)
 
-### Example Domain Policy
-
-```bash
-Domain: MOLLYSEC.COM
-
-Minimum Password Length : 14
-Password History Length : 24
-Lockout Threshold       : 5
-Minimum Password Age    : 1 day
-Maximum Password Age    : 90 days
-```
-
 ## Requirements
 
 * Python 3 (Core)
 * BloodHound ZIP exports (optional)
 * Hashcat potfiles (optional)
-
-## Limitations
-
-* The tool organises and maps password audit data but does not perform password cracking itself.
-* Statistics and reporting are intentionally outside the scope of this tool.
 
 ## Roadmap
 * ???
