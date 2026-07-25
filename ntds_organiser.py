@@ -464,9 +464,6 @@ def main():
     ok(f"NTLM Hashes       : {len(ntlm_hashes)}")
     ok(f"LM Hashes         : {len(lm_hashes)}")
 
-    if filtered:
-        ok(f"Filtered Accounts : {len(filtered)}")
-
     if domain_admins:
         ok(f"Domain Admins    : {len(domain_admins)}")
 
