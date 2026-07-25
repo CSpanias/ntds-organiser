@@ -30,7 +30,7 @@ LM_EMPTY = "aad3b435b51404eeaad3b435b51404ee"
 # ---------------------------------------------------------------------------
 
 def info(msg):
-    print(f"[*] {msg}")
+    print(f"\n[*] {msg}")
 
 
 def ok(msg):
@@ -327,7 +327,7 @@ def main():
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    info(f"NTDS Organiser v{VERSION}")
+    info(f"NTDS Organiser v{VERSION}\n")
 
     entries = parse_ntds_file(args.ntds)
     enabled = get_enabled(entries)
