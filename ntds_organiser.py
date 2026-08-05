@@ -358,7 +358,7 @@ def build_lm_candidates(mapped_lm_passwords):
     for entry in mapped_lm_passwords:
 
         try:
-            username, password = entry.split(":", 1)
+            _, password = entry.split(":", 1)
         except ValueError:
             continue
 
@@ -386,6 +386,15 @@ def build_lm_da_passwords(mapped_lm_passwords, domain_admins):
     da_set = {normalize_username(u) for u in domain_admins}
 
     return [entry for entry in mapped_lm_passwords if normalize_username(entry.split(":", 1)[0]) in da_set]
+
+
+def extract_lm_da_users(mapped_lm_da_passwords):
+    return sorted({
+        normalize_username(
+            entry.split(":", 1)[0]
+        )
+        for entry in mapped_lm_da_passwords
+    })
 
 # ---------------------------------------------------------------------------
 # Main
@@ -420,6 +429,7 @@ def main():
     domain_admins = []
     mapped_passwords = []
     mapped_lm_passwords = []
+    lm_da_users = []
     mapped_lm_da_passwords = []
     lm_da_candidates = []
 
@@ -475,7 +485,10 @@ def main():
 
         if mapped_lm_da_passwords:
 
-            write_lines(output_dir / "lm-das.txt", mapped_lm_da_passwords)
+            lm_da_users = extract_lm_da_users(mapped_lm_da_passwords)
+            write_lines(output_dir / "lm-da-hashes.txt", mapped_lm_da_passwords)
+            write_lines(output_dir / "lm-da-users.txt", lm_da_users)
+
             lm_da_candidates = build_lm_candidates(mapped_lm_da_passwords)
             write_lines(output_dir / "lm-da-candidates.txt",lm_da_candidates)
 
@@ -500,9 +513,6 @@ def main():
 
     if domain_admins:
         write_lines(output_dir / "domain-admins.txt", domain_admins)
-
-    if mapped_lm_da_passwords:
-        write_lines(output_dir / "lm-das.txt", mapped_lm_da_passwords)
 
 
     # -----------------------------------------------------------------------
