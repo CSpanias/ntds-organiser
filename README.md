@@ -6,6 +6,26 @@ Developed as a Proof of Concept to accompany [Password Audits Part 2: Hash Organ
 
 It automates the post-processing of `secretsdump.py` output and combines NTDS data with BloodHound and Hashcat artefacts and produces clean datasets that are easier to review, crack, and report on.
 
+## Workflow
+
+```markdown
+NTDS
+ ↓
+Parse accounts
+ ↓
+Filter enabled users
+ ↓
+Extract NTLM and LM hashes
+ ↓
+(Optional) BloodHound enrichment
+ ↓
+(Optional) Password mapping
+ ↓
+LM analysis
+ ↓
+Generate reporting and spraying artefacts
+```
+
 ## Installation
 
 Recommended (uv):
@@ -65,8 +85,13 @@ The tool follows the same workflow typically used during an Active Directory pas
 ### Password Mapping
 
 * Parse Hashcat potfiles
-* Map recovered passwords back to users
+* Map recovered NTLM and LM passwords back to users
 * Generate clean `username:password` datasets
+
+### LM Hash Analysis
+
+* Automatically identify Domain Admins with cracked LM passwords
+* Generate capitalization candidates from recovered LM passwords
 
 ## Usage
 
@@ -83,6 +108,9 @@ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip
 # Map Recovered Passwords
 ntds-organiser -n mollysec.com.ntds -p hashcat.potfile
 
+# LM Analysis Workflow
+ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p lm.potfile
+
 # Full Workflow
 ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p hashcat.potfile -f testing-acc-1,testing-acc-2
 ```
@@ -98,16 +126,19 @@ $ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f te
     - MOLLYSEC\testing-acc-1
     - MOLLYSEC\testing-acc-2
 
-[+] Enabled Accounts  : 422
-[+] Disabled Accounts : 39
-[+] User Accounts     : 314
-[+] Machine Accounts  : 108
-[+] NTLM Hashes       : 297
-[+] LM Hashes         : 2
-[+] Domain Admins     : 7
-[+] Mapped Passwords  : 126
+[+] Enabled Accounts     : 422
+[+] Disabled Accounts    : 39
+[+] User Accounts        : 314
+[+] Machine Accounts     : 108
+[+] NTLM Hashes          : 297
+[+] LM Hashes            : 5
+[+] Domain Admins        : 7
+[+] Mapped Passwords     : 126
+[+] Mapped LM Passwords  : 4
+[+] LM Domain Admins     : 1
+[+] LM DA Candidates     : 256
 
-[+] Output Directory  : ntds-organiser
+[+] Output Directory     : ntds-organiser
 ```
 
 ## Generated Files
@@ -123,10 +154,13 @@ $ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f te
 
 ### Conditional Outputs
 
-> Generated only when applicable.
+> Generated only when LM hashes are present and recovered.
 
-* `lm-users.txt` (Users that have an LM hash)
-* `lm-hashes.txt` (Hashcat-ready LM hashes)
+* `lm-users.txt` (Accounts containing LM hashes)
+* `lm-hashes.txt` (Unique LM hashes suitable for Hashcat)
+* `mapped-lm-passwords.txt` (Recovered LM passwords mapped back to users)
+* `lm-das.txt` (Domain Admin accounts that have recovered LM passwords)
+* `lm-da-candidates.txt` (Capitalization permutations generated from Domain Admin LM passwords)
 
 ### Audit Artefacts
 
@@ -144,4 +178,4 @@ $ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f te
 * Hashcat potfiles (optional)
 
 ## Roadmap
-* ???
+* Support additional privileged groups (Enterprise Admins, Account Operators, DNS Admins, etc.)

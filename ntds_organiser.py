@@ -19,6 +19,12 @@ import argparse
 import zipfile
 import json
 from pathlib import Path
+from itertools import product
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
 
 VERSION = "1.0"
 
@@ -295,7 +301,6 @@ def load_potfile(path):
             continue
 
         hash_value, password = line.split(":", 1)
-
         mapping[hash_value.lower()] = password
 
     return mapping
@@ -336,6 +341,52 @@ def map_lm_passwords(users, potfile):
 
     return mapped
 
+
+def lm_variants(password):
+    chars = [
+        (c.lower(), c.upper()) if c.isalpha() else (c,)
+        for c in password.strip()
+    ]
+
+    for candidate in product(*chars):
+        yield "".join(candidate)
+
+
+def build_lm_candidates(mapped_lm_passwords):
+    candidates = set()
+
+    for entry in mapped_lm_passwords:
+
+        try:
+            username, password = entry.split(":", 1)
+        except ValueError:
+            continue
+
+        for candidate in lm_variants(password):
+            candidates.add(candidate)
+
+    return sorted(candidates)
+
+
+def normalize_username(username):
+
+    username = username.lower()
+
+    if "\\" in username:
+        username = username.split("\\", 1)[1]
+
+    if "@" in username:
+        username = username.split("@", 1)[0]
+
+    return username
+
+
+def build_lm_da_passwords(mapped_lm_passwords, domain_admins):
+
+    da_set = {normalize_username(u) for u in domain_admins}
+
+    return [entry for entry in mapped_lm_passwords if normalize_username(entry.split(":", 1)[0]) in da_set]
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -363,6 +414,14 @@ def main():
     machines = get_machines(enabled)
     users = get_users(enabled)
     users, filtered = apply_filter(users, args.filter)
+    ntlm_hashes = extract_ntlm_hashes(users)
+    lm_users, lm_hashes = extract_lm(users)
+
+    domain_admins = []
+    mapped_passwords = []
+    mapped_lm_passwords = []
+    mapped_lm_da_passwords = []
+    lm_da_candidates = []
 
     if filtered:
         warn(f"Filtered Accounts ({len(filtered)})")
@@ -370,11 +429,7 @@ def main():
         for account in filtered:
             print(f" - {account['username']}")
 
-    ntlm_hashes = extract_ntlm_hashes(users)
-
-    lm_users, lm_hashes = extract_lm(users)
-
-    domain_admins = []
+    
 
     if args.bloodhound:
         users_json, groups_json, domains_json = (load_bloodhound_zip(args.bloodhound))
@@ -407,18 +462,22 @@ def main():
                 ]
             )
 
-    mapped_passwords = []
-    mapped_lm_passwords = []
-
     if args.potfile:
         mapped_passwords = map_passwords(users, args.potfile)
-        mapped_lm_passwords = map_lm_passwords(lm_users, args.potfile)
-
-    if mapped_passwords:
-        write_lines(output_dir / "mapped-passwords.txt", mapped_passwords)
+        mapped_lm_passwords = map_lm_passwords(lm_users, args.potfile)  
 
     if mapped_lm_passwords:
         write_lines(output_dir / "mapped-lm-passwords.txt", mapped_lm_passwords)
+
+    if mapped_lm_passwords and domain_admins:
+
+        mapped_lm_da_passwords = build_lm_da_passwords(mapped_lm_passwords, domain_admins)
+
+        if mapped_lm_da_passwords:
+
+            write_lines(output_dir / "lm-das.txt", mapped_lm_da_passwords)
+            lm_da_candidates = build_lm_candidates(mapped_lm_da_passwords)
+            write_lines(output_dir / "lm-da-candidates.txt",lm_da_candidates)
 
 
     # -----------------------------------------------------------------------
@@ -433,17 +492,18 @@ def main():
     write_lines(output_dir / "ntlm-hashes.txt", ntlm_hashes)
 
     if lm_users:
-
         write_lines(output_dir / "lm-users.txt", [e["raw"] for e in lm_users])
         write_lines(output_dir / "lm-hashes.txt", lm_hashes)
 
     if filtered:
-
         write_lines(output_dir / ".testing-accounts.txt", [e["raw"] for e in filtered])
 
     if domain_admins:
-
         write_lines(output_dir / "domain-admins.txt", domain_admins)
+
+    if mapped_lm_da_passwords:
+        write_lines(output_dir / "lm-das.txt", mapped_lm_da_passwords)
+
 
     # -----------------------------------------------------------------------
     # Summary
@@ -451,21 +511,27 @@ def main():
 
     print()
 
-    ok(f"Enabled Accounts  : {len(enabled)}")
-    ok(f"Disabled Accounts : {len(disabled)}")
-    ok(f"User Accounts     : {len(users)}")
-    ok(f"Machine Accounts  : {len(machines)}")
-    ok(f"NTLM Hashes       : {len(ntlm_hashes)}")
-    ok(f"LM Hashes         : {len(lm_hashes)}")
+    ok(f"Enabled Accounts    : {len(enabled)}")
+    ok(f"Disabled Accounts   : {len(disabled)}")
+    ok(f"User Accounts       : {len(users)}")
+    ok(f"Machine Accounts    : {len(machines)}")
+    ok(f"NTLM Hashes         : {len(ntlm_hashes)}")
+    ok(f"LM Hashes           : {len(lm_hashes)}")
 
     if domain_admins:
-        ok(f"Domain Admins    : {len(domain_admins)}")
+        ok(f"Domain Admins       : {len(domain_admins)}")
 
     if mapped_passwords:
-        ok(f"Mapped Passwords : {len(mapped_passwords)}")
+        ok(f"Mapped Passwords    : {len(mapped_passwords)}")
 
     if mapped_lm_passwords:
         ok(f"Mapped LM Passwords : {len(mapped_lm_passwords)}")
+
+    if mapped_lm_da_passwords:
+        ok(f"LM Domain Admins    : {len(mapped_lm_da_passwords)}")
+
+    if lm_da_candidates:
+        ok(f"LM DA Candidates    : {len(lm_da_candidates)}")
 
     print()
     ok(f"Output Directory  : {output_dir}")
