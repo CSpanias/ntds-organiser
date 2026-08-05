@@ -279,18 +279,27 @@ def load_potfile(path):
 
     mapping = {}
 
-    with open(path, encoding="utf-8", errors="ignore") as f:
+    try:
+        with open(path, encoding="utf-16") as f:
+            lines = f.readlines()
 
-        for line in f:
-            line = line.rstrip()
+    except UnicodeError:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
 
-            if ":" not in line:
-                continue
+    for line in lines:
 
-            hash_value, password = (line.split(":", 1))
-            mapping[hash_value.lower()] = password
+        line = line.rstrip()
+
+        if ":" not in line:
+            continue
+
+        hash_value, password = line.split(":", 1)
+
+        mapping[hash_value.lower()] = password
 
     return mapping
+
 
 def map_passwords(users, potfile):
 
@@ -307,6 +316,25 @@ def map_passwords(users, potfile):
 
     return mapped
 
+
+def map_lm_passwords(users, potfile):
+
+    hash_lookup = load_potfile(potfile)
+    mapped = []
+
+    for user in users:
+
+        lm_hash = user["lm"].lower()
+
+        if lm_hash == LM_EMPTY:
+            continue
+
+        if lm_hash not in hash_lookup:
+            continue
+
+        mapped.append(f"{user['username']}:{hash_lookup[lm_hash]}")
+
+    return mapped
 
 # ---------------------------------------------------------------------------
 # Main
@@ -380,76 +408,42 @@ def main():
             )
 
     mapped_passwords = []
+    mapped_lm_passwords = []
 
     if args.potfile:
         mapped_passwords = map_passwords(users, args.potfile)
+        mapped_lm_passwords = map_lm_passwords(lm_users, args.potfile)
 
     if mapped_passwords:
         write_lines(output_dir / "mapped-passwords.txt", mapped_passwords)
+
+    if mapped_lm_passwords:
+        write_lines(output_dir / "mapped-lm-passwords.txt", mapped_lm_passwords)
 
 
     # -----------------------------------------------------------------------
     # Output Files
     # -----------------------------------------------------------------------
 
-    write_lines(
-        output_dir / "enabled-users.txt",
-        sorted(
-            e["username"]
-            for e in users
-        )
-    )
-
-    write_lines(
-        output_dir / ".ntds-enabled.txt",
-        [e["raw"] for e in enabled]
-    )
-
-    write_lines(
-        output_dir / ".ntds-disabled.txt",
-        [e["raw"] for e in disabled]
-    )
-
-    write_lines(
-        output_dir / ".ntds-machines.txt",
-        [e["raw"] for e in machines]
-    )
-
-    write_lines(
-        output_dir / "ntds-users-clean.txt",
-        [e["raw"] for e in users]
-    )
-
-    write_lines(
-        output_dir / "ntlm-hashes.txt",
-        ntlm_hashes
-    )
+    write_lines(output_dir / "enabled-users.txt", sorted(e["username"] for e in users))
+    write_lines(output_dir / ".ntds-enabled.txt", [e["raw"] for e in enabled])
+    write_lines(output_dir / ".ntds-disabled.txt", [e["raw"] for e in disabled])
+    write_lines(output_dir / ".ntds-machines.txt", [e["raw"] for e in machines])
+    write_lines(output_dir / "ntds-users-clean.txt", [e["raw"] for e in users])
+    write_lines(output_dir / "ntlm-hashes.txt", ntlm_hashes)
 
     if lm_users:
 
-        write_lines(
-            output_dir / "lm-users.txt",
-            [e["raw"] for e in lm_users]
-        )
-
-        write_lines(
-            output_dir / "lm-hashes.txt",
-            lm_hashes
-        )
+        write_lines(output_dir / "lm-users.txt", [e["raw"] for e in lm_users])
+        write_lines(output_dir / "lm-hashes.txt", lm_hashes)
 
     if filtered:
 
-        write_lines(
-            output_dir / ".testing-accounts.txt",
-            [e["raw"] for e in filtered]
-        )
+        write_lines(output_dir / ".testing-accounts.txt", [e["raw"] for e in filtered])
 
     if domain_admins:
 
-        write_lines(
-            output_dir / "domain-admins.txt",
-            domain_admins
-        )
+        write_lines(output_dir / "domain-admins.txt", domain_admins)
 
     # -----------------------------------------------------------------------
     # Summary
@@ -469,6 +463,9 @@ def main():
 
     if mapped_passwords:
         ok(f"Mapped Passwords : {len(mapped_passwords)}")
+
+    if mapped_lm_passwords:
+        ok(f"Mapped LM Passwords : {len(mapped_lm_passwords)}")
 
     print()
     ok(f"Output Directory  : {output_dir}")
