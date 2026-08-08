@@ -137,6 +137,7 @@ $ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f te
 [+] Mapped LM Passwords  : 4
 [+] LM Domain Admins     : 1
 [+] LM DA Candidates     : 256
+[+] Company Words        : 10
 
 [+] Output Directory     : ntds-organiser
 ```
@@ -150,6 +151,7 @@ $ ntds-organiser -n mollysec.com.ntds -b bloodhound.zip -p company.potfile -f te
 * `domain-policy.txt` (Password policy extracted from the domain)
 * `ntds-users-clean.txt` (Primary account dataset used for password mapping)
 * `ntlm-hashes.txt` (Hashcat-ready NTLM hashes)
+* `company-words.txt` (Domain related words)
 * `mapped-passwords.txt` (Final dataset in `username:password` format)
 
 ### Conditional Outputs

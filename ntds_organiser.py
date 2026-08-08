@@ -18,6 +18,7 @@
 import argparse
 import zipfile
 import json
+import re
 from pathlib import Path
 from itertools import product
 
@@ -54,6 +55,11 @@ def write_lines(path, lines):
         for line in lines:
             f.write(f"{line}\n")
 
+
+def summary(label, value):
+    ok(f"{label:<20}: {value}")
+
+
 def apply_username_filter(usernames, patterns):
 
     if not patterns:
@@ -73,6 +79,52 @@ def apply_username_filter(usernames, patterns):
             for f in filters
         )
     ]
+
+
+def extract_company_words(domains):
+
+    words = set()
+
+    for domain in domains:
+        domain = domain.lower().strip()
+
+        if not domain:
+            continue
+
+        # Remove TLD
+        base = domain.rsplit(".", 1)[0]
+
+        # Full company string
+        words.add(base)
+
+        # Special character split
+        for token in re.split(r"[^a-z0-9]+", base):
+
+            token = token.strip()
+
+            if len(token) >= 3:
+                words.add(token)
+
+    return sorted(words)
+
+
+def extract_username_domains(entries):
+
+    domains = set()
+
+    for entry in entries:
+        username = entry["username"]
+
+        if "\\" not in username:
+            continue
+
+        prefix = username.split("\\", 1)[0]
+
+        if "." in prefix:
+            domains.add(prefix)
+
+    return sorted(domains)
+
 
 # ---------------------------------------------------------------------------
 # NTDS Parsing
@@ -438,9 +490,7 @@ def main():
 
         for account in filtered:
             print(f" - {account['username']}")
-
     
-
     if args.bloodhound:
         users_json, groups_json, domains_json = (load_bloodhound_zip(args.bloodhound))
 
@@ -457,6 +507,17 @@ def main():
         domain_admins = apply_username_filter(domain_admins, args.filter)
 
         policy = extract_domain_policy(domains_json)
+
+        company_words = set()
+
+        if policy and policy["domain"]:
+            company_words.update(extract_company_words([policy["domain"]]))
+
+        username_domains = extract_username_domains(entries)
+        company_words.update(extract_company_words(username_domains))
+
+        if company_words:
+            write_lines(output_dir / "company-words.txt",sorted(company_words))
         
         if policy:
             write_lines(
@@ -524,30 +585,31 @@ def main():
 
     print()
 
-    ok(f"Enabled Accounts    : {len(enabled)}")
-    ok(f"Disabled Accounts   : {len(disabled)}")
-    ok(f"User Accounts       : {len(users)}")
-    ok(f"Machine Accounts    : {len(machines)}")
-    ok(f"NTLM Hashes         : {len(ntlm_hashes)}")
-    ok(f"LM Hashes           : {len(lm_hashes)}")
+    summary("Enabled Accounts", len(enabled))
+    summary("Disabled Accounts",len(disabled))
+    summary("User Accounts", len(users))
+    summary("Machine Accounts", len(machines))
+    summary("NTLM Hashes", len(ntlm_hashes))
+    summary("LM Hashes", len(lm_hashes))
+    summary("Company Words", len(company_words))
 
     if domain_admins:
-        ok(f"Domain Admins       : {len(domain_admins)}")
+        summary("Domain Admins", len(domain_admins))
 
     if mapped_ntlm_passwords:
-        ok(f"Mapped Passwords    : {len(mapped_ntlm_passwords)}")
+        summary("Mapped Passwords", len(mapped_ntlm_passwords))
 
     if mapped_lm_passwords:
-        ok(f"Mapped LM Passwords : {len(mapped_lm_passwords)}")
+        summary("Mapped LM Passwords", len(mapped_lm_passwords))
 
     if mapped_lm_da_passwords:
-        ok(f"LM Domain Admins    : {len(mapped_lm_da_passwords)}")
+        summary("LM Domain Admins", len(mapped_lm_da_passwords))
 
     if lm_da_candidates:
-        ok(f"LM DA Candidates    : {len(lm_da_candidates)}")
+        summary("LM DA Candidates", len(lm_da_candidates))
 
     print()
-    ok(f"Output Directory  : {output_dir}")
+    summary("Output Directory", output_dir)
 
 
 if __name__ == "__main__":
