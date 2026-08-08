@@ -427,7 +427,7 @@ def main():
     lm_users, lm_hashes = extract_lm(users)
 
     domain_admins = []
-    mapped_passwords = []
+    mapped_ntlm_passwords = []
     mapped_lm_passwords = []
     lm_da_users = []
     mapped_lm_da_passwords = []
@@ -473,8 +473,11 @@ def main():
             )
 
     if args.potfile:
-        mapped_passwords = map_passwords(users, args.potfile)
+        mapped_ntlm_passwords = map_passwords(users, args.potfile)
         mapped_lm_passwords = map_lm_passwords(lm_users, args.potfile)  
+
+    if mapped_ntlm_passwords:
+        write_lines(output_dir / "mapped-ntlm-passwords.txt", mapped_ntlm_passwords)
 
     if mapped_lm_passwords:
         write_lines(output_dir / "mapped-lm-passwords.txt", mapped_lm_passwords)
@@ -531,8 +534,8 @@ def main():
     if domain_admins:
         ok(f"Domain Admins       : {len(domain_admins)}")
 
-    if mapped_passwords:
-        ok(f"Mapped Passwords    : {len(mapped_passwords)}")
+    if mapped_ntlm_passwords:
+        ok(f"Mapped Passwords    : {len(mapped_ntlm_passwords)}")
 
     if mapped_lm_passwords:
         ok(f"Mapped LM Passwords : {len(mapped_lm_passwords)}")
