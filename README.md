@@ -1,5 +1,8 @@
 # ntds-organiser
 
+> [!WARNING]
+> Deprecated and kept only as a PoC for the article, see [`password-audit`](https://github.com/CSpanias/password-audit) for the actual tool.
+
 A Python-based tool designed to make Active Directory password audits more efficient.
 
 Developed as a Proof of Concept to accompany [Password Audits Part 2: Hash Organisation](https://mollysec.com/posts/password-audits-part-2/).
